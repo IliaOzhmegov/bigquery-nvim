@@ -37,6 +37,12 @@ local function spawn(args, on_done)
   end)
 end
 
+-- bq sometimes writes errors to stdout; prefer stderr, fall back to stdout.
+local function bq_err(out, err)
+  local msg = err ~= "" and err or out
+  return msg ~= "" and msg or "(no output)"
+end
+
 local function decode_json(raw, context)
   if raw == "" then return nil, {} end
   local ok, data = pcall(vim.json.decode, raw)
@@ -51,7 +57,7 @@ function M.list_datasets(project, cb)
   spawn({ "ls", "--format=json", "--max_results=1000", project },
     function(code, out, err)
       if code ~= 0 then
-        cb(("bq ls %s: %s"):format(project, err))
+        cb(("bq ls %s: %s"):format(project, bq_err(out, err)))
         return
       end
       local jerr, data = decode_json(out, "list_datasets")
@@ -74,7 +80,7 @@ function M.list_tables(project, dataset, cb)
     project .. ":" .. dataset,
   }, function(code, out, err)
     if code ~= 0 then
-      cb(("bq ls %s:%s: %s"):format(project, dataset, err))
+      cb(("bq ls %s:%s: %s"):format(project, dataset, bq_err(out, err)))
       return
     end
     local jerr, data = decode_json(out, "list_tables")
@@ -101,7 +107,7 @@ function M.query(sql, project, cb)
   end
   args[#args + 1] = sql
   spawn(args, function(code, out, err)
-    if code ~= 0 then cb("query failed: " .. err)
+    if code ~= 0 then cb("query failed: " .. bq_err(out, err))
     else cb(nil, out) end
   end)
 end
@@ -112,7 +118,7 @@ function M.describe(project, dataset, table_name, cb)
     "show", "--format=prettyjson",
     ("%s:%s.%s"):format(project, dataset, table_name),
   }, function(code, out, err)
-    if code ~= 0 then cb("bq show failed: " .. err)
+    if code ~= 0 then cb("bq show failed: " .. bq_err(out, err))
     else cb(nil, out) end
   end)
 end
