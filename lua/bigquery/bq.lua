@@ -99,16 +99,51 @@ function M.list_tables(project, dataset, cb)
   end)
 end
 
---- Run a SQL query.  cb(err, output_string)
+--- Run a SQL query.  SQL is passed via stdin to avoid flag-parsing issues
+--- with queries that contain `--` comments.  cb(err, output_string)
 function M.query(sql, project, cb)
   local args = { "query", "--nouse_legacy_sql", "--format=pretty" }
   if project then
     args[#args + 1] = "--project_id=" .. project
   end
-  args[#args + 1] = sql
-  spawn(args, function(code, out, err)
+
+  local out_chunks = {}
+  local err_chunks = {}
+  local stdout_pipe = uv.new_pipe(false)
+  local stderr_pipe = uv.new_pipe(false)
+  local stdin_pipe  = uv.new_pipe(false)
+
+  local handle
+  handle = uv.spawn("bq", {
+    args  = args,
+    stdio = { stdin_pipe, stdout_pipe, stderr_pipe },
+  }, vim.schedule_wrap(function(code)
+    stdout_pipe:close()
+    stderr_pipe:close()
+    handle:close()
+    local out = table.concat(out_chunks)
+    local err = table.concat(err_chunks)
     if code ~= 0 then cb("query failed: " .. bq_err(out, err))
     else cb(nil, out) end
+  end))
+
+  if not handle then
+    stdin_pipe:close()
+    stdout_pipe:close()
+    stderr_pipe:close()
+    vim.schedule(function() cb("failed to spawn 'bq'") end)
+    return
+  end
+
+  stdout_pipe:read_start(function(_, data)
+    if data then out_chunks[#out_chunks + 1] = data end
+  end)
+  stderr_pipe:read_start(function(_, data)
+    if data then err_chunks[#err_chunks + 1] = data end
+  end)
+
+  stdin_pipe:write(sql, function()
+    stdin_pipe:shutdown(function() stdin_pipe:close() end)
   end)
 end
 
