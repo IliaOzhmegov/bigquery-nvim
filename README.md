@@ -72,11 +72,18 @@ require("bigquery").setup({
 
 | Key | Action |
 |-----|--------|
-| `<CR>` | Expand dataset / collapse / open SELECT query for table |
+| `<CR>` | Expand dataset / collapse / open SELECT query for table (in browser) |
 | `d` | Describe table (runs `bq show`, opens JSON schema buffer) |
 | `r` | Refresh — clears cache and re-fetches everything |
 | `q` | Close browser |
 | `?` | Show this help |
+
+### Running a query
+
+Pressing `<CR>` on a table opens a SQL buffer pre-filled with
+`SELECT * … LIMIT 100`. Edit the query, then press **Enter** (`<CR>`) in
+normal mode to run it. Results appear in a split at the bottom and are reused
+on subsequent runs.
 
 ## Auth & latency
 
