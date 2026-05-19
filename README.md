@@ -1,5 +1,8 @@
 # bigquery-nvim
 
+> **Warning**: This plugin is experimental. It has not been properly reviewed,
+> and has no tests. Use at your own risk and expect rough edges.
+
 A Neovim plugin for browsing and querying BigQuery — no project-wide IAM
 permissions required, no dadbod needed.
 
@@ -25,7 +28,7 @@ permissions required, no dadbod needed.
 
 ```lua
 {
-  "your-username/bigquery-nvim",
+  "iliaozhmegov/bigquery-nvim",
   cmd = { "BigQuery", "BigQueryToggle" },
   opts = {
     project = "your-gcp-project",
@@ -37,7 +40,7 @@ permissions required, no dadbod needed.
 
 ```lua
 use {
-  "your-username/bigquery-nvim",
+  "iliaozhmegov/bigquery-nvim",
   config = function()
     require("bigquery").setup({ project = "your-gcp-project" })
   end,
