@@ -54,7 +54,7 @@ end
 
 --- List datasets in `project`.  cb(err, {string,...})
 function M.list_datasets(project, cb)
-  spawn({ "ls", "--format=json", "--max_results=1000", project },
+  spawn({ "ls", "--format=json", "--max_results=1000", "--project_id=" .. project },
     function(code, out, err)
       if code ~= 0 then
         cb(("bq ls %s: %s"):format(project, bq_err(out, err)))
