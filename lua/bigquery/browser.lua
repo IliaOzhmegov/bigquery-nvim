@@ -169,6 +169,62 @@ local function prev_win_id()
   end
 end
 
+local RESULTS_NAME = "BigQuery Results"
+
+local function show_results(output)
+  -- Reuse existing results buffer if present
+  local rbuf
+  for _, b in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(b) and vim.fn.bufname(b) == RESULTS_NAME then
+      rbuf = b
+      break
+    end
+  end
+  if not rbuf then
+    rbuf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_name(rbuf, RESULTS_NAME)
+    vim.bo[rbuf].buftype   = "nofile"
+    vim.bo[rbuf].bufhidden = "hide"
+    vim.bo[rbuf].swapfile  = false
+  end
+
+  local lines = vim.split(output ~= "" and output or "(no rows)", "\n")
+  vim.bo[rbuf].modifiable = true
+  vim.api.nvim_buf_set_lines(rbuf, 0, -1, false, lines)
+  vim.bo[rbuf].modifiable = false
+
+  -- Show in bottom split if not already visible
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_buf(w) == rbuf then
+      return  -- already visible
+    end
+  end
+  vim.cmd("botright 15split")
+  local rwin = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(rwin, rbuf)
+  vim.wo[rwin].number         = false
+  vim.wo[rwin].relativenumber = false
+  vim.wo[rwin].signcolumn     = "no"
+  vim.wo[rwin].wrap           = false
+end
+
+local function run_query(buf, project)
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local sql = table.concat(lines, "\n"):match("^%s*(.-)%s*$")
+  if sql == "" then
+    vim.notify("[bigquery] empty query", vim.log.levels.WARN)
+    return
+  end
+  vim.notify("[bigquery] running…", vim.log.levels.INFO)
+  bq.query(sql, project, function(err, out)
+    if err then
+      vim.notify("[bigquery] " .. err, vim.log.levels.ERROR)
+    else
+      show_results(out)
+    end
+  end)
+end
+
 local function open_in_prev(buf)
   local w = prev_win_id()
   if w then
@@ -182,14 +238,17 @@ end
 
 local function open_table_query(node)
   local dataset = node.parent and node.parent.name or ""
-  local sql = ("SELECT *\nFROM `%s.%s.%s`\nLIMIT 100"):format(
-    S.project, dataset, node.name)
+  local project = S.project
+  local sql = ("-- <CR> to run\nSELECT *\nFROM `%s.%s.%s`\nLIMIT 100"):format(
+    project, dataset, node.name)
   local b = vim.api.nvim_create_buf(false, true)
   vim.bo[b].filetype  = "sql"
   vim.bo[b].buftype   = "nofile"
   vim.bo[b].buflisted = true
   vim.api.nvim_buf_set_name(b, ("bq: %s.%s"):format(dataset, node.name))
   vim.api.nvim_buf_set_lines(b, 0, -1, false, vim.split(sql, "\n"))
+  vim.keymap.set("n", "<CR>", function() run_query(b, project) end,
+    { buffer = b, silent = true, desc = "run query via bq" })
   open_in_prev(b)
 end
 
