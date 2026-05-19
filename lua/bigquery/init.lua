@@ -17,7 +17,7 @@ function M.setup(opts)
 
   local cfg = require("bigquery.config").options
   if cfg.dadbod.enabled then
-    require("bigquery.dadbod").setup()
+    require("bigquery.sync").setup()
   end
 end
 
@@ -44,7 +44,7 @@ function M.sync_dbui(project)
     return
   end
   vim.notify("[bigquery] fetching schema for " .. project .. " …", vim.log.levels.INFO)
-  require("bigquery.dadbod").populate(project, {})
+  require("bigquery.sync").populate(project, {})
 end
 
 return M

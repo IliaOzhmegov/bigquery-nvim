@@ -11,7 +11,7 @@ end, { nargs = "?", desc = "Toggle BigQuery table browser" })
 
 vim.api.nvim_create_user_command("BigQuerySyncDBUI", function(a)
   require("bigquery").sync_dbui(a.args ~= "" and a.args or nil)
-end, { nargs = "?", desc = "Sync BigQuery tables into vim-dadbod-ui schema cache" })
+end, { nargs = "?", desc = "Sync BigQuery table listing to external schema cache" })
 
 vim.api.nvim_create_user_command("BigQueryRefresh", function()
   require("bigquery.cache").clear()
